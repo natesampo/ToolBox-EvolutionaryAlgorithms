@@ -1,0 +1,18 @@
+This Toolbox was a great success and I learned a lot! One issue I noticed with
+the finished product was that it takes a very short amount of time to come up
+with a string that is very nearly the goal string ('SKYNT S ONLINE' for example,
+when 'SKYNET IS ONLINE' was the goal). Typically, it would reach one of these
+close strings and never actually develop into the full goal string, even after
+500 generations. In order to remedy this, I experimented with altering the number
+of generations, and seeing how many were typically required to actually achieve
+the full goal string. I also tested changed the goal string to see if shorter
+or less complex strings were easier to achieve. I made a small pseudo-table below
+with some results:
+
+GOAL STRING:              GENERATIONS TO ACHIEVE:
+"SKYNET IS ONLINE"            ~700
+"ILL BE BACK"                 ~300
+"SARAH CONNOR"                ~150
+"ARNOLD"                      ~200
+"TERMINATOR"                  ~100
+"KYLE REESE"                  ~350

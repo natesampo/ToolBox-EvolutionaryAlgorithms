@@ -92,8 +92,22 @@ class Message(list):
 # Genetic operators
 # -----------------------------------------------------------------------------
 
-# TODO: Implement levenshtein_distance function (see Day 9 in-class exercises)
-# HINT: Now would be a great time to implement memoization if you haven't
+def levenshtein_distance(s1, s2):
+    if len(s1) < len(s2):
+        return levenshtein_distance(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+    return previous_row[-1]
+
 
 def evaluate_text(message, goal_text, verbose=VERBOSE):
     """
@@ -104,10 +118,10 @@ def evaluate_text(message, goal_text, verbose=VERBOSE):
     distance = levenshtein_distance(message.get_text(), goal_text)
     if verbose:
         print("{msg!s}\t[Distance: {dst!s}]".format(msg=message, dst=distance))
-    return (distance, )     # Length 1 tuple, required by DEAP
+    return (distance, )     # Length 1 tuple, required by DEAPVALID_CHARS
 
 
-def mutate_text(message, prob_ins=0.05, prob_del=0.05, prob_sub=0.05):
+def mutate_text(message, prob_ins=5, prob_del=5, prob_sub=5):
     """
     Given a Message and independent probabilities for each mutation type,
     return a length 1 tuple containing the mutated Message.
@@ -119,22 +133,41 @@ def mutate_text(message, prob_ins=0.05, prob_del=0.05, prob_sub=0.05):
         Substitution:   Replace one character of the Message with a random
                         (legal) character
     """
+    message = message.get_text()
+    if random.randint(0, 100) < prob_ins:
+        c = VALID_CHARS[random.randint(0, len(VALID_CHARS)-1)]
+        cut = random.randint(0, len(message))
+        message = message[:cut] + c + message[cut:]
+    if random.randint(0, 100) < prob_del:
+        cut = random.randint(0, len(message))
+        message = message[:cut-1] + message[cut:]
+    if random.randint(0, 100) < prob_sub:
+        c = VALID_CHARS[random.randint(0, len(VALID_CHARS)-1)]
+        cut = random.randint(0, len(message))
+        message = message[:cut-1] + c + message[cut:]
+    nice_msg = Message(message)
+    return(nice_msg, )   # Length 1 tuple, required by DEAP
 
-    if random.random() < prob_ins:
-        # TODO: Implement insertion-type mutation
-        pass
 
-    # TODO: Also implement deletion and substitution mutations
-    # HINT: Message objects inherit from list, so they also inherit
-    #       useful list methods
-    # HINT: You probably want to use the VALID_CHARS global variable
-
-    return (message, )   # Length 1 tuple, required by DEAP
+def mate(str1, str2):
+    temp_str1 = str1.get_text()
+    temp_str2 = str2.get_text()
+    first_cut = random.randint(0, min(len(temp_str1), len(temp_str2))-1)
+    if first_cut < min(len(temp_str1), len(temp_str2)):
+        second_cut = random.randint(first_cut + 1, min(len(temp_str1), len(temp_str2)))
+    else:
+        second_cut = first_cut
+    str1 = temp_str1[:first_cut] + temp_str2[first_cut:second_cut] + temp_str1[second_cut:]
+    str2 = temp_str2[:first_cut] + temp_str1[first_cut:second_cut] + temp_str2[second_cut:]
+    new_msg = Message(str1)
+    newer_msg = Message(str2)
+    return(new_msg, newer_msg)
 
 
 # -----------------------------------------------------------------------------
 # DEAP Toolbox and Algorithm setup
 # -----------------------------------------------------------------------------
+
 
 def get_toolbox(text):
     """Return DEAP Toolbox configured to evolve given 'text' string"""
@@ -149,7 +182,7 @@ def get_toolbox(text):
 
     # Genetic operators
     toolbox.register("evaluate", evaluate_text, goal_text=text)
-    toolbox.register("mate", tools.cxTwoPoint)
+    toolbox.register("mate", mate)
     toolbox.register("mutate", mutate_text)
     toolbox.register("select", tools.selTournament, tournsize=3)
 
@@ -185,7 +218,7 @@ def evolve_string(text):
                                    toolbox,
                                    cxpb=0.5,    # Prob. of crossover (mating)
                                    mutpb=0.2,   # Probability of mutation
-                                   ngen=500,    # Num. of generations to run
+                                   ngen=350,    # Num. of generations to run
                                    stats=stats)
 
     return pop, log
@@ -195,13 +228,12 @@ def evolve_string(text):
 # Run if called from the command line
 # -----------------------------------------------------------------------------
 if __name__ == "__main__":
-
     # Get goal message from command line (optional)
     import sys
     if len(sys.argv) == 1:
         # Default goal of the evolutionary algorithm if not specified.
         # Pretty much the opposite of http://xkcd.com/534
-        goal = "SKYNET IS NOW ONLINE"
+        goal = "KYLE REESE"
     else:
         goal = " ".join(sys.argv[1:])
 
